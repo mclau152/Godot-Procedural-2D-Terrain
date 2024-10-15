@@ -1,0 +1,33 @@
+[gd_scene load_steps=5 format=3 uid="uid://dfrk87tdw84oc"]
+
+[ext_resource type="Script" path="res://node_2d.gd" id="1_f2u63"]
+[ext_resource type="Script" path="res://character_body_2d.gd" id="2_e2t51"]
+[ext_resource type="Texture2D" uid="uid://f56k55lwqw7c" path="res://icon.svg" id="2_yrqpr"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_0ngvh"]
+radius = 32.0
+height = 72.0
+
+[node name="Node2D" type="Node2D"]
+
+[node name="Node2D" type="Node2D" parent="."]
+script = ExtResource("1_f2u63")
+
+[node name="MeshInstance2D" type="MeshInstance2D" parent="Node2D"]
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Node2D"]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Node2D/StaticBody2D"]
+
+[node name="CharacterBody2D" type="CharacterBody2D" parent="."]
+position = Vector2(1, -124)
+script = ExtResource("2_e2t51")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D"]
+shape = SubResource("CapsuleShape2D_0ngvh")
+
+[node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_yrqpr")
+
+[node name="Camera2D" type="Camera2D" parent="CharacterBody2D"]
