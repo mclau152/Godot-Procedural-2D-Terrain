@@ -1,75 +1,58 @@
 extends Node2D
 
-# Called when the node enters the scene tree for the first time.
-func _ready() -> void:
-	create_rolling_hills()
-	update_collision_polygon()
+@onready var mesh_instance = $MeshInstance2D
+@onready var collision_polygon = $StaticBody2D/CollisionPolygon2D
 
-# Function to create the rolling hills mesh with smoother, larger terrain
-func create_rolling_hills() -> void:
-	# Create a new ArrayMesh
-	var array_mesh = ArrayMesh.new()
+const WIDTH = 30000
+const HEIGHT = 600
+const STEP_X = 20
+const NUM_POINTS = WIDTH / STEP_X
 
-	# Define the number of points and adjust hill width/height for smoother terrain
-	var num_points = 200  # More points for smoother hills
-	var hill_width = 40   # Wider hills
-	var hill_height = 20  # Lower amplitude for gentler slopes
+var noise = FastNoiseLite.new()
 
-	# Generate vertices for the hills (smoother sine wave)
+func _ready():
+	setup_noise()
+	generate_cave()
+
+func setup_noise():
+	noise.seed = randi()
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	noise.frequency = 0.003
+	noise.fractal_type = FastNoiseLite.FRACTAL_FBM
+	noise.fractal_octaves = 4
+	noise.fractal_gain = 0.5
+
+func generate_cave():
 	var vertices = PackedVector2Array()
-	for i in range(num_points):
-		var x = i * hill_width
-		var y = sin(i * 0.1) * hill_height  # Smaller frequency for smoother waves
-		vertices.append(Vector2(x, y))
-	
-	# Add ground vertices to close the shape
-	vertices.append(Vector2(hill_width * (num_points - 1), 300)) # Right ground point (300 for more depth)
-	vertices.append(Vector2(0, 300)) # Left ground point
-	
-	# Create indices for the triangle faces
 	var indices = PackedInt32Array()
-	for i in range(num_points - 1):
-		indices.append(i)
-		indices.append(i + 1)
-		indices.append(num_points) # Close the shape with the ground points
+	var collision_vertices = PackedVector2Array()
 
-		indices.append(i + 1)
-		indices.append(num_points + 1)
-		indices.append(num_points)
+	for i in range(NUM_POINTS):
+		var x = i * STEP_X
+		var y_ceiling = noise.get_noise_2d(x * 0.1, 0.0) * (HEIGHT / 3) - (HEIGHT / 3)
+		var y_floor = noise.get_noise_2d(x * 0.1, 100.0) * (HEIGHT / 4) + (HEIGHT / 2)
 
-	# Create a surface with vertices and indices
+		vertices.append(Vector2(x, y_ceiling))
+		vertices.append(Vector2(x, y_floor))
+		collision_vertices.append(Vector2(x, y_ceiling))
+		collision_vertices.append(Vector2(x, y_floor))
+
+		if i < NUM_POINTS - 1:
+			var j = i * 2
+			indices.append_array([j, j+2, j+1, j+2, j+3, j+1])
+
+	vertices.append_array([Vector2(WIDTH, HEIGHT), Vector2(0, HEIGHT)])
+	collision_vertices.append_array([Vector2(WIDTH, HEIGHT), Vector2(0, HEIGHT)])
+
+	create_mesh(vertices, indices)
+	collision_polygon.polygon = collision_vertices
+
+func create_mesh(vertices: PackedVector2Array, indices: PackedInt32Array):
 	var arrays = []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
 	arrays[Mesh.ARRAY_INDEX] = indices
 
-	# Add the surface to the array mesh
+	var array_mesh = ArrayMesh.new()
 	array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-
-	# Assign the mesh to the existing MeshInstance2D
-	var mesh_instance = $MeshInstance2D
 	mesh_instance.mesh = array_mesh
-
-# Function to update the existing CollisionPolygon2D
-func update_collision_polygon() -> void:
-	# Get the existing CollisionPolygon2D node
-	var collision_polygon = $StaticBody2D/CollisionPolygon2D
-	
-	# Define the number of points and adjust hill width/height for smoother terrain
-	var num_points = 200
-	var hill_width = 40
-	var hill_height = 20
-	
-	# Generate vertices for the collision (same as mesh vertices)
-	var collision_vertices = []
-	for i in range(num_points):
-		var x = i * hill_width
-		var y = sin(i * 0.1) * hill_height  # Same frequency for smoother collision shape
-		collision_vertices.append(Vector2(x, y))
-	
-	# Add ground vertices to close the collision shape
-	collision_vertices.append(Vector2(hill_width * (num_points - 1), 300)) # Right ground point
-	collision_vertices.append(Vector2(0, 300)) # Left ground point
-
-	# Assign the vertices to the existing CollisionPolygon2D
-	collision_polygon.polygon = collision_vertices
